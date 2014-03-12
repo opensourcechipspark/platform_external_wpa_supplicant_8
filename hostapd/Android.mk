@@ -24,7 +24,16 @@ L_CFLAGS += -DVERSION_STR_POSTFIX=\"-$(PLATFORM_VERSION)\"
 # Set Android log name
 L_CFLAGS += -DANDROID_LOG_NAME=\"hostapd\"
 
+ifeq ($(BOARD_WLAN_DEVICE), mediatek)
+L_CFLAGS += -DANDROID_P2P
+endif
+
 ifeq ($(BOARD_WLAN_DEVICE), bcmdhd)
+L_CFLAGS += -DANDROID_P2P
+endif
+
+ifeq ($(BOARD_WIFI_VENDOR), realtek)
+L_CFLAGS += -DREALTEK_WIFI_VENDOR
 L_CFLAGS += -DANDROID_P2P
 endif
 
