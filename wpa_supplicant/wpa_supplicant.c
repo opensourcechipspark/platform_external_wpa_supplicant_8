@@ -109,6 +109,10 @@ extern int wpa_debug_show_keys;
 extern int wpa_debug_timestamp;
 extern struct wpa_driver_ops *wpa_drivers[];
 
+#ifdef WIFI_EAGLE
+extern void cache_res_free(void);
+#endif
+
 /* Configure default/group WEP keys for static WEP */
 int wpa_set_wep_keys(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 {
@@ -730,6 +734,10 @@ void wpa_supplicant_terminate_proc(struct wpa_global *global)
 	if (pending)
 		return;
 	eloop_terminate();
+
+#ifdef WIFI_EAGLE
+        cache_res_free();
+#endif
 }
 
 
@@ -1888,6 +1896,10 @@ void wpa_supplicant_disable_network(struct wpa_supplicant *wpa_s,
 	}
 }
 
+#ifdef WIFI_EAGLE
+extern u8 gl_var_ssid[64];
+extern size_t gl_var_ssid_len;
+#endif
 
 /**
  * wpa_supplicant_select_network - Attempt association with a network
@@ -1942,6 +1954,11 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 	wpa_s->connect_without_scan = NULL;
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
+#ifdef WIFI_EAGLE
+        //ap_cache
+        os_memcpy(gl_var_ssid, ssid->ssid, ssid->ssid_len);
+        gl_var_ssid_len = ssid->ssid_len;
+#endif
 
 	if (wpa_supplicant_fast_associate(wpa_s) != 1)
 		wpa_supplicant_req_scan(wpa_s, 0, disconnected ? 100000 : 0);
@@ -2454,6 +2471,7 @@ int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
 	wpa_s->prev_scan_ssid = WILDCARD_SSID_SCAN;
 	wpa_s->prev_scan_wildcard = 0;
 
+//gwl
 	if (wpa_supplicant_enabled_networks(wpa_s)) {
 		if (wpa_supplicant_delayed_sched_scan(wpa_s, interface_count,
 						      100000))
@@ -2869,6 +2887,43 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 			os_free(wpa_s->conf->ctrl_interface);
 			wpa_s->conf->ctrl_interface = NULL;
 		}
+
+                if (!wpa_s->conf->wifi_module_name) {
+                    char *buf = (char*)os_malloc(sizeof(char) * 10);
+                    if (buf != NULL) {
+                        memset(buf, 0, 10);
+                        wpa_s->conf->wifi_module_name = buf;
+                        FILE *fp = fopen("/sys/class/rkwifi/chip", "r");
+                        if(NULL == fp) {
+                            wpa_printf(MSG_ERROR, "Can't open /sys/class/rkwifi/chip, errno = %d", errno);
+                            os_free(buf);
+                        } else {
+                            if(0 == fgets(buf, 10, fp)) {
+                                wpa_printf(MSG_ERROR, "read /sys/class/rkwifi/chip failed.");
+                                os_free(buf);
+                            }
+                            fclose(fp);
+                        }
+                    }
+                }
+                wpa_printf(MSG_ERROR, "Get wifi module chip name: <%s>.", wpa_s->conf->wifi_module_name);
+                //if (wpa_s->conf->wifi_module_name) {
+                //    if (!strcmp("AP6335", wpa_s->conf->wifi_module_name) ||
+                //           !strcmp("AP6234", wpa_s->conf->wifi_module_name) ||
+                //           !strcmp("AP6441", wpa_s->conf->wifi_module_name)) {
+                //        char parambuf[100] = {0};
+                //        char *param = wpa_s->conf->driver_param;
+                //        if (param && !os_strstr(param, "use_multi_chan_concurrent=1")) {
+                //            strcpy(parambuf, param);
+                //            strcat(parambuf, "use_multi_chan_concurrent=1");
+                //            os_free(wpa_s->conf->driver_param);
+                //            wpa_s->conf->driver_param = os_strdup(parambuf);
+                //            wpa_printf(MSG_ERROR, "Wifi module <%s> support multiple channels concurrent.",
+                //                       wpa_s->conf->wifi_module_name);
+                //        }
+                //    }
+                //}
+
 	} else
 		wpa_s->conf = wpa_config_alloc_empty(iface->ctrl_interface,
 						     iface->driver_param);
@@ -3123,11 +3178,18 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
 		wpa_s->ctrl_iface = NULL;
 	}
 
+        if (wpa_s->conf->wifi_module_name != NULL) {
+                os_free(wpa_s->conf->wifi_module_name);
+        }
+
 	if (wpa_s->conf != NULL) {
 		wpa_config_free(wpa_s->conf);
 		wpa_s->conf = NULL;
 	}
 
+#ifdef WIFI_EAGLE
+        cache_res_free();
+#endif
 	os_free(wpa_s);
 }
 
@@ -3509,6 +3571,9 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 	wpa_debug_close_syslog();
 	wpa_debug_close_file();
 	wpa_debug_close_linux_tracing();
+#ifdef WIFI_EAGLE
+        cache_res_free();
+#endif
 }
 
 

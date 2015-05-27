@@ -44,12 +44,24 @@ L_CFLAGS += -DREALTEK_WIFI_VENDOR
 L_CFLAGS += -DANDROID_P2P
 endif
 
+ 
+ifeq ($(BOARD_WLAN_DEVICE), mtk)
+L_CFLAGS += -DANDROID_MTK_WCN
+L_CFLAGS += -DANDROID_P2P
+endif
+ 
+
+
 ifeq ($(BOARD_WLAN_DEVICE), qcwcn)
 L_CFLAGS += -DANDROID_P2P
 endif
 
 ifeq ($(BOARD_WLAN_DEVICE), mrvl)
 L_CFLAGS += -DANDROID_P2P
+endif
+ifeq ($(BOARD_WIFI_VENDOR), Espressif)
+L_CFLAGS += -DANDROID_P2P
+L_CFLAGS += -DWIFI_EAGLE
 endif
 
 # Use Android specific directory for control interface sockets
@@ -278,6 +290,14 @@ ifdef CONFIG_P2P_STRICT
 L_CFLAGS += -DCONFIG_P2P_STRICT
 endif
 endif
+ 
+
+
+ifeq ($(strip $(BOARD_CONNECTIVITY_VENDOR)), MediaTek_mt7601)
+L_CFLAGS += -DCONFIG_P2P_AUTO_GO_AS_SOFTAP
+endif
+ 
+
 
 ifdef CONFIG_WIFI_DISPLAY
 L_CFLAGS += -DCONFIG_WIFI_DISPLAY
